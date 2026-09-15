@@ -1,0 +1,726 @@
+<title>RSA Chunk Timing</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --bg:#f7f6f2; --panel:#fffefb; --ink:#181a1f; --ink-soft:#43474f;
+    --muted:#8a8f9c; --line:#e4e1d8; --grid:#eceae2; --grid-strong:#d9d5c9;
+    --replan:#d0782b; --replan-soft:#f4e2cf; --rectify:#1f9c95; --rectify-soft:#d3ece9;
+    --stale:#cf3b52; --stale-soft:#f6dbe0; --track:#c9c5ba;
+    --chunkA:#4c5bd4; --chunkA-soft:#dcdffb; --chunkB:#e0a020; --chunkB-soft:#f7eccf;
+    --shadow:0 1px 2px rgba(20,22,28,.05),0 8px 28px rgba(20,22,28,.06);
+    --radius:14px;
+  }
+  :root:not([data-theme="light"]){}
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#0e0f13; --panel:#16181e; --ink:#f3f2ee; --ink-soft:#c3c6cd;
+      --muted:#868b98; --line:#262933; --grid:#1c1f27; --grid-strong:#2b2f3a;
+      --replan:#e8963f; --replan-soft:#3a2a17; --rectify:#38c3ba; --rectify-soft:#123330;
+      --stale:#e5546b; --stale-soft:#3a1720; --track:#3a3e49;
+      --chunkA:#8b93f0; --chunkA-soft:#1e2350; --chunkB:#f0bb4b; --chunkB-soft:#3a2e12;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 34px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0e0f13; --panel:#16181e; --ink:#f3f2ee; --ink-soft:#c3c6cd;
+    --muted:#868b98; --line:#262933; --grid:#1c1f27; --grid-strong:#2b2f3a;
+    --replan:#e8963f; --replan-soft:#3a2a17; --rectify:#38c3ba; --rectify-soft:#123330;
+    --stale:#e5546b; --stale-soft:#3a1720; --track:#3a3e49;
+    --chunkA:#8b93f0; --chunkA-soft:#1e2350; --chunkB:#f0bb4b; --chunkB-soft:#3a2e12;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 34px rgba(0,0,0,.5);
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Newsreader",Georgia,serif; font-size:17px; line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px; margin:0 auto; padding:clamp(28px,5vw,64px) clamp(18px,4vw,40px) 80px}
+  .eyebrow{
+    font-family:"JetBrains Mono",monospace; font-size:12px; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--muted); margin:0 0 14px;
+  }
+  h1{
+    font-family:"Space Grotesk",system-ui,sans-serif; font-weight:600;
+    font-size:clamp(30px,5.2vw,50px); line-height:1.04; letter-spacing:-.02em;
+    margin:0 0 16px; text-wrap:balance;
+  }
+  .lede{font-size:clamp(17px,2.1vw,20px); color:var(--ink-soft); max-width:64ch; margin:0 0 6px}
+  .lede b{font-weight:500; color:var(--ink)}
+  h2{
+    font-family:"Space Grotesk",sans-serif; font-weight:600; font-size:22px;
+    letter-spacing:-.01em; margin:0 0 4px;
+  }
+  .sub{color:var(--muted); font-size:15px; margin:0 0 20px}
+  section{margin-top:clamp(40px,6vw,68px)}
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:clamp(18px,3vw,26px);
+  }
+  /* controls */
+  .controls{display:flex; flex-wrap:wrap; gap:22px 34px; align-items:flex-end; margin-bottom:18px}
+  .ctl{display:flex; flex-direction:column; gap:7px; min-width:210px; flex:1}
+  .ctl label{
+    font-family:"JetBrains Mono",monospace; font-size:11.5px; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--muted); display:flex; justify-content:space-between; gap:12px;
+  }
+  .ctl label .val{color:var(--replan); font-weight:600; font-variant-numeric:tabular-nums}
+  input[type=range]{
+    -webkit-appearance:none; appearance:none; width:100%; height:5px; border-radius:99px;
+    background:var(--grid-strong); outline:none; cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:18px; height:18px; border-radius:50%;
+    background:var(--replan); border:3px solid var(--panel); box-shadow:0 1px 4px rgba(0,0,0,.25);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:18px; height:18px; border:3px solid var(--panel); border-radius:50%;
+    background:var(--replan); box-shadow:0 1px 4px rgba(0,0,0,.25);
+  }
+  .ctl.rate label .val{color:var(--rectify)}
+  .ctl.rate input::-webkit-slider-thumb{background:var(--rectify)}
+  .ctl.rate input::-moz-range-thumb{background:var(--rectify)}
+  .readout{
+    display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px;
+    font-family:"JetBrains Mono",monospace; font-size:12.5px;
+  }
+  .chip{
+    display:inline-flex; align-items:baseline; gap:7px; padding:6px 12px; border-radius:99px;
+    background:var(--grid); border:1px solid var(--line); font-variant-numeric:tabular-nums;
+  }
+  .chip b{font-weight:600}
+  .chip .k{color:var(--muted); letter-spacing:.04em}
+  .chip.big{background:var(--replan-soft); border-color:transparent}
+  .chip.big b{color:var(--replan)}
+  canvas{display:block; width:100%; height:auto}
+  .scroller{overflow-x:auto; border-radius:10px}
+  .legend{
+    display:flex; flex-wrap:wrap; gap:16px 22px; margin-top:18px;
+    font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--ink-soft);
+  }
+  .legend span{display:inline-flex; align-items:center; gap:8px}
+  .sw{width:20px; height:11px; border-radius:3px; flex:none}
+  .sw.dot{width:11px; border-radius:50%}
+  .sw.replan{background:var(--replan)} .sw.rectify{background:var(--rectify)}
+  .sw.stale{background:var(--stale)} .sw.track{background:var(--track)}
+  /* three paradigms */
+  .trio{display:grid; grid-template-columns:repeat(3,1fr); gap:16px}
+  .para{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 16px 14px; box-shadow:var(--shadow)}
+  .para h3{font-family:"Space Grotesk",sans-serif; font-size:15.5px; font-weight:600; margin:0 0 2px}
+  .para .tag{font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.09em; text-transform:uppercase; margin:0 0 12px}
+  .para.async .tag{color:var(--stale)} .para.sync .tag{color:var(--muted)} .para.rsa .tag{color:var(--rectify)}
+  .para p{font-size:14.5px; line-height:1.5; color:var(--ink-soft); margin:12px 0 0}
+  .para .err{font-family:"JetBrains Mono",monospace; font-size:12px; margin-top:11px; font-variant-numeric:tabular-nums}
+  .para.async .err b{color:var(--stale)} .para.sync .err b{color:var(--muted)} .para.rsa .err b{color:var(--rectify)}
+  .steps{margin:0; padding:0; list-style:none; counter-reset:s; display:flex; flex-direction:column; gap:14px}
+  .steps li{position:relative; padding-left:44px; font-size:15.5px; color:var(--ink-soft)}
+  .steps li::before{
+    counter-increment:s; content:counter(s); position:absolute; left:0; top:-1px;
+    width:30px; height:30px; border-radius:8px; display:grid; place-items:center;
+    font-family:"JetBrains Mono",monospace; font-size:13px; font-weight:600;
+    background:var(--grid); color:var(--ink); border:1px solid var(--line);
+  }
+  .steps li b{color:var(--ink); font-weight:500; font-family:"Space Grotesk",sans-serif}
+  code{font-family:"JetBrains Mono",monospace; font-size:.9em; background:var(--grid); padding:1px 6px; border-radius:5px}
+  .foot{margin-top:56px; padding-top:22px; border-top:1px solid var(--line); color:var(--muted); font-size:13.5px; font-family:"JetBrains Mono",monospace}
+  @media (max-width:720px){ .trio{grid-template-columns:1fr} .ctl{min-width:100%} }
+  /* Paper figures supplement the interactive timing diagrams above. */
+  .paper-figures{scroll-margin-top:24px}
+  .paper-figure-nav{display:flex; flex-wrap:wrap; gap:10px; margin:0 0 24px}
+  .paper-figure-nav a{
+    font-family:"Space Grotesk",system-ui,sans-serif; font-size:14px;
+    color:var(--ink-soft); background:var(--panel); border:1px solid var(--line);
+    border-radius:99px; padding:7px 14px; text-decoration:none;
+  }
+  .paper-figure-nav a:hover{color:var(--rectify); border-color:var(--rectify)}
+  .paper-figure{margin:0 0 24px; scroll-margin-top:24px; overflow:hidden}
+  .paper-figure:last-child{margin-bottom:0}
+  .paper-figure-header{display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 18px; margin-bottom:18px}
+  .paper-figure h3{
+    font-family:"Space Grotesk",system-ui,sans-serif; font-size:18px;
+    line-height:1.4; font-weight:600; margin:0; flex:1 1 240px;
+  }
+  .paper-figure-original{font-family:"Space Grotesk",system-ui,sans-serif; font-size:13px; color:var(--rectify); text-underline-offset:3px}
+  .paper-figure-image{display:block; background:#fff; border:1px solid var(--line); border-radius:8px; overflow:hidden; cursor:zoom-in}
+  .paper-figure img{display:block; width:100%; height:auto}
+  .paper-figure figcaption{margin-top:16px; color:var(--ink-soft); font-size:15px; line-height:1.6}
+  .paper-figure figcaption strong{color:var(--ink)}
+  .paper-figure-nav a:focus-visible,.paper-figure a:focus-visible{outline:3px solid var(--rectify); outline-offset:4px}
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">Rectifying Stale Actions · deployment timing</p>
+  <h1>Async VLA, synchronous rectify</h1>
+  <p class="lede">A single joint, plotted against wall-clock time. The frozen VLA replans in the
+  <b>background</b> while control keeps executing the old chunk; the moment it returns, ~5&nbsp;ms
+  of rectification pulls that stale chunk back onto the freshest observation before it is served.
+  Drag the VLA latency to watch <b>delta</b> and the swap point move.</p>
+
+  <section>
+    <div class="card">
+      <div class="controls">
+        <div class="ctl">
+          <label>VLA replan latency <span class="val" id="lat-v">85 ms</span></label>
+          <input type="range" id="lat" min="30" max="180" value="85" step="1">
+        </div>
+        <div class="ctl rate">
+          <label>Control rate <span class="val" id="rate-v">30 Hz</span></label>
+          <input type="range" id="rate" min="20" max="60" value="30" step="1">
+        </div>
+      </div>
+
+      <div class="readout" id="readout"></div>
+
+      <div class="scroller">
+        <canvas id="tl" width="1600" height="560" aria-label="RSA chunk timing diagram"></canvas>
+      </div>
+
+      <div class="legend">
+        <span><i class="sw" style="background:var(--chunkA)"></i> chunk A · executing (older plan)</span>
+        <span><i class="sw" style="background:var(--chunkB)"></i> chunk B · after swap (rectified)</span>
+        <span><i class="sw replan"></i> replan · full VLA (beat 1)</span>
+        <span><i class="sw rectify"></i> rectify · RectifierDiT (beat 2)</span>
+        <span><i class="sw stale"></i> chunk B if rectify were skipped (stale)</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>The two-beat cycle</h2>
+    <p class="sub">After a one-off pure-VLA startup, every inference cycle is replan → rectify on one connection.</p>
+    <ol class="steps">
+      <li><b>Startup (t₀).</b> No old chunk exists, so run the VLA once — a pure replan, <em>no</em> rectify — and begin executing <code>chunk₀</code> from the front. This is the only cycle without a rectify.</li>
+      <li><b>Replan on obs_old.</b> The background thread sends the current observation and the frozen VLA runs (~tens of ms), storing <code>stale_chunk</code> + <code>kv_cache</code> for this connection. Control never blocks — it keeps popping the <em>old</em> chunk, so the joint moves continuously.</li>
+      <li><b>Measure & compute delta.</b> The instant replan returns, the client measures its latency and sets <code>delta = max(2, ceil(latency × rate))</code> — the number of control steps the observation has drifted. Never hardcoded.</li>
+      <li><b>Rectify on obs_new.</b> Grab the freshest observation and run the lightweight RectifierDiT (~5 ms), reusing the stored stale chunk + kv over the same connection. The VLA does not re-run.</li>
+      <li><b>Atomic swap.</b> Replace <code>current_chunk</code> with the rectified chunk and reset the cursor to <code>control_delay</code> (default 0). No crossfade, no dropped frames — the corrected chunk is executed verbatim from the front.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Three paradigms, one latency budget</h2>
+    <p class="sub">What each approach does during that background window — and the error it leaves in the served action. Values track the sliders above.</p>
+    <div class="trio">
+      <div class="para async">
+        <div class="tag">Original async</div>
+        <h3>Smooth the stale</h3>
+        <p>Two threads, never waits. The new chunk is stale w.r.t. now, so it's hidden by drop-n + a linear crossfade. Continuous, but the served action lags the observation.</p>
+        <div class="err">served error ≈ <b id="err-async">—</b></div>
+      </div>
+      <div class="para sync">
+        <div class="tag">Synchronous</div>
+        <h3>Wait for the VLA</h3>
+        <p>Block the control loop until the VLA returns, every cycle. The action is aligned to the observation — but the arm stalls for the full replan latency each time.</p>
+        <div class="err">served error ≈ <b id="err-sync">0</b> · stall <b id="stall-sync">—</b></div>
+      </div>
+      <div class="para rsa">
+        <div class="tag">RSA · this work</div>
+        <h3>Rectify the stale</h3>
+        <p>VLA runs in the background (old chunk keeps playing); on return, ~5 ms of rectify realigns the chunk to obs_new via delta. Near-sync accuracy, no stall, no smoothing.</p>
+        <div class="err">served error ≈ <b id="err-rsa">—</b> · wait <b id="wait-rsa">~5 ms</b></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>How two chunks join up</h2>
+    <p class="sub">Two consecutive VLA inferences produce two action chunks — <b style="color:var(--chunkA)">chunk A</b> (older plan) and <b style="color:var(--chunkB)">chunk B</b> (newer plan). Each strategy stitches B onto A differently. The overlap region is magnified so the seam is visible.</p>
+    <div class="card">
+      <div class="scroller">
+        <canvas id="cmp" width="1600" height="760" aria-label="Three-paradigm comparison"></canvas>
+      </div>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--chunkA)"></i> chunk A · from VLA inference #1</span>
+        <span><i class="sw" style="background:var(--chunkB)"></i> chunk B · from VLA inference #2</span>
+        <span><i class="sw dot" style="background:var(--ink)"></i> action actually executed</span>
+        <span><i class="sw replan"></i> VLA busy (computing B)</span>
+        <span><i class="sw rectify"></i> rectify</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="paper-figures" id="paper-figures" aria-labelledby="paper-figures-title">
+    <h2 id="paper-figures-title">RSA in three figures</h2>
+    <p class="sub">The paper's inference workflows, distillation process, and online handoff. Select a figure to view the full-resolution image.</p>
+    <nav class="paper-figure-nav" aria-label="Paper figures">
+      <a href="#paper-figure-1">01 · Inference workflows</a>
+      <a href="#paper-figure-2">02 · Training</a>
+      <a href="#paper-figure-3">03 · Deployment</a>
+    </nav>
+
+    <figure class="card paper-figure" id="paper-figure-1">
+      <div class="paper-figure-header">
+        <h3>Figure 1 · Synchronous and asynchronous inference</h3>
+        <a class="paper-figure-original" href="figures/rsa_figure1.png" target="_blank" rel="noopener">Open full image ↗</a>
+      </div>
+      <a class="paper-figure-image" href="figures/rsa_figure1.png" target="_blank" rel="noopener" aria-label="Open Figure 1 at full resolution in a new tab">
+        <img src="figures/rsa_figure1.png" width="4385" height="3254" loading="lazy" decoding="async" alt="Synchronous and asynchronous VLA inference workflows, showing how inference latency separates the input observation from the scene at execution.">
+      </a>
+      <figcaption>Synchronous execution waits for the VLA result; asynchronous execution overlaps inference with the previous action chunk. A plan computed from <strong>obs(t)</strong> becomes available at <strong>obs(t+Δ)</strong>, motivating correction with the latest observation.</figcaption>
+    </figure>
+
+    <figure class="card paper-figure" id="paper-figure-2">
+      <div class="paper-figure-header">
+        <h3>Figure 2 · Random-delay self-distillation</h3>
+        <a class="paper-figure-original" href="figures/rsa_figure2.png" target="_blank" rel="noopener">Open full image ↗</a>
+      </div>
+      <a class="paper-figure-image" href="figures/rsa_figure2.png" target="_blank" rel="noopener" aria-label="Open Figure 2 at full resolution in a new tab">
+        <img src="figures/rsa_figure2.png" width="6222" height="1923" loading="lazy" decoding="async" alt="Training diagram: a frozen VLA supplies a stale chunk and KV context from the earlier observation and a teacher chunk from the delayed observation to supervise a DiT rectifier.">
+      </a>
+      <figcaption>Training reuses the VLA's <strong>existing SFT data</strong>, sampling observation pairs at random delays. The frozen VLA uses shared sampling noise to produce stale and teacher chunks. <strong>Brownian-bridge endpoint matching</strong>, inspired by the Schrödinger-bridge perspective, trains the DiT and its conditioning encoders from the stale chunk toward the teacher endpoint. The teacher chunk provides training supervision only.</figcaption>
+    </figure>
+
+    <figure class="card paper-figure" id="paper-figure-3">
+      <div class="paper-figure-header">
+        <h3>Figure 3 · Asynchronous generation, synchronized handoff</h3>
+        <a class="paper-figure-original" href="figures/rsa_figure3.png" target="_blank" rel="noopener">Open full image ↗</a>
+      </div>
+      <a class="paper-figure-image" href="figures/rsa_figure3.png" target="_blank" rel="noopener" aria-label="Open Figure 3 at full resolution in a new tab">
+        <img src="figures/rsa_figure3.png" width="4999" height="3784" loading="lazy" decoding="async" alt="RSA deployment: execute the previous chunk during VLA inference, briefly hold the last command during rectification, then execute the complete corrected chunk from its first action.">
+      </a>
+      <figcaption><strong>Heavy VLA inference stays asynchronous; lightweight rectification briefly synchronizes the handoff so the latest observation can update the action chunk before execution.</strong> During correction, the action cursor pauses and the controller holds its last command. It waits for the actual result, installs the complete corrected chunk, and resumes from index zero. The DiT averages <strong>approximately 5 ms end to end on an RTX 4090 with five sampling steps</strong>, including visual and KV encoding, communication, and host–device transfer. Sensing and the physical scene continue during this short wait.</figcaption>
+    </figure>
+  </section>
+
+  <p class="foot" id="foot">H = 50 · control_delay = 0 · single websocket connection · kv_cache stored per-connection</p>
+</div>
+
+<script>
+(function(){
+  const cvs = document.getElementById('tl');
+  const ctx = cvs.getContext('2d');
+  const latEl = document.getElementById('lat'), rateEl = document.getElementById('rate');
+  const latV = document.getElementById('lat-v'), rateV = document.getElementById('rate-v');
+  const readout = document.getElementById('readout');
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+  const H = 50;                    // chunk horizon
+  const CTRL_STEPS = 26;           // control steps drawn on the axis
+  const CYCLE_START = 9;           // steps into the axis where the steady-state cycle triggers
+
+  function state(){
+    const lat = +latEl.value;              // ms
+    const rate = +rateEl.value;            // Hz
+    const dt = 1000/rate;                  // ms per control step
+    const delta = Math.max(2, Math.ceil(lat/dt));   // real-time delta
+    const latSteps = lat/dt;               // replan span in (fractional) control steps
+    const rectifyMs = 5;
+    return {lat, rate, dt, delta, latSteps, rectifyMs};
+  }
+
+  // A gentle joint trajectory (normalized 0..1) sampled at any fractional step.
+  function truth(step){
+    const x = step/CTRL_STEPS;
+    return 0.5 + 0.34*Math.sin(x*Math.PI*1.7 - 0.3) - 0.12*Math.cos(x*Math.PI*3.1);
+  }
+
+  function draw(){
+    const s = state();
+    const W = cvs.width, Hp = cvs.height, dpr = 1;
+    ctx.clearRect(0,0,W,Hp);
+
+    // layout
+    const padL = 118, padR = 40, padT = 42, padB = 40;
+    const plotW = W - padL - padR;
+    const stepPx = plotW / CTRL_STEPS;
+    const X = st => padL + st*stepPx;
+
+    // lane geometry
+    const laneReplanY = padT + 24;
+    const laneCtrlY   = padT + 118;
+    const curveTop    = padT + 176;
+    const curveH      = 250;
+    const Y = v => curveTop + (1-v)*curveH;   // v in 0..1
+
+    // ---- vertical time grid (every control step) ----
+    ctx.font = '500 12px "JetBrains Mono",monospace';
+    ctx.textAlign = 'center';
+    for(let i=0;i<=CTRL_STEPS;i++){
+      const x = X(i);
+      const strong = i%5===0;
+      ctx.strokeStyle = strong ? css('--grid-strong') : css('--grid');
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x,padT); ctx.lineTo(x,curveTop+curveH); ctx.stroke();
+      if(strong){
+        ctx.fillStyle = css('--muted');
+        ctx.fillText(Math.round(i*s.dt)+'', x, curveTop+curveH+22);
+        ctx.fillStyle = css('--ink-soft');
+        ctx.fillText(i+'', x, padT-14);
+      }
+    }
+    // axis captions
+    ctx.textAlign='left';
+    ctx.fillStyle = css('--muted');
+    ctx.font='500 11px "JetBrains Mono",monospace';
+    ctx.fillText('CONTROL STEP', 8, padT-10);
+    ctx.fillText('ms', padL - 6 + plotW + 6, curveTop+curveH+22);
+
+    // lane labels
+    ctx.fillStyle = css('--ink-soft');
+    ctx.font='600 12px "Space Grotesk",sans-serif';
+    ctx.textAlign='right';
+    ctx.fillText('inference', padL-16, laneReplanY+5);
+    ctx.fillText('thread', padL-16, laneReplanY+21);
+    ctx.fillText('executed', padL-16, laneCtrlY+5);
+    ctx.fillText('action', padL-16, laneCtrlY+21);
+    ctx.fillText('joint q(t)', padL-16, curveTop+14);
+    ctx.textAlign='left';
+
+    // ================= steady-state cycle timeline =================
+    const tStart = CYCLE_START;                 // replan starts here (steps)
+    const tReplanEnd = tStart + s.latSteps;     // replan returns
+    const tRectEnd = tReplanEnd + s.rectifyMs/s.dt;
+    const swapStep = tRectEnd;                   // atomic swap moment
+
+    // ---- inference lane: replan bar + rectify bar ----
+    // These two beats PRODUCE chunk B. Tint the bars toward chunk B so the causal link reads.
+    const barY = laneReplanY, barH = 26;
+    // replan (VLA) — the beat that computes chunk B's raw (stale) plan
+    roundRect(X(tStart), barY-barH/2, X(tReplanEnd)-X(tStart), barH, 6);
+    ctx.fillStyle = css('--replan-soft'); ctx.fill();
+    ctx.strokeStyle = css('--replan'); ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle = css('--replan'); ctx.textAlign='center';
+    ctx.font='600 12px "JetBrains Mono",monospace';
+    if(X(tReplanEnd)-X(tStart) > 70) ctx.fillText('replan · VLA '+s.lat+'ms → chunk B (stale)', (X(tStart)+X(tReplanEnd))/2, barY+4);
+    // rectify — realigns chunk B onto obs_new
+    const rw = Math.max(X(tRectEnd)-X(tReplanEnd), 8);
+    roundRect(X(tReplanEnd), barY-barH/2, rw, barH, 5);
+    ctx.fillStyle = css('--rectify-soft'); ctx.fill();
+    ctx.strokeStyle = css('--rectify'); ctx.stroke();
+
+    // rectify callout
+    ctx.fillStyle = css('--rectify'); ctx.textAlign='left';
+    ctx.font='600 11px "JetBrains Mono",monospace';
+    ctx.fillText('↳ rectify ~5ms → chunk B (aligned)', X(tReplanEnd)+4, barY-barH/2-8);
+
+    // delta bracket: from obs_old(tStart) to obs_new(swap)
+    const brY = laneReplanY+46;
+    ctx.strokeStyle = css('--muted'); ctx.lineWidth=1; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(X(tStart),barY+barH/2); ctx.lineTo(X(tStart),brY);
+    ctx.moveTo(X(swapStep),barY+barH/2); ctx.lineTo(X(swapStep),brY); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(X(tStart),brY); ctx.lineTo(X(swapStep),brY); ctx.stroke();
+    ctx.fillStyle = css('--ink-soft'); ctx.textAlign='center';
+    ctx.font='600 12px "JetBrains Mono",monospace';
+    ctx.fillText('delta = max(2, ⌈'+s.latSteps.toFixed(2)+'⌉) = '+s.delta+' steps', (X(tStart)+X(swapStep))/2, brY+16);
+
+    // ---- swap marker (vertical) ----
+    ctx.strokeStyle = css('--rectify'); ctx.lineWidth=2; ctx.setLineDash([5,4]);
+    ctx.beginPath(); ctx.moveTo(X(swapStep),padT+6); ctx.lineTo(X(swapStep),curveTop+curveH); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = css('--rectify'); ctx.textAlign='center';
+    ctx.font='600 11px "JetBrains Mono",monospace';
+    ctx.fillText('SWAP', X(swapStep), curveTop+curveH+38);
+
+    // ================= executed-action lane (dots) =================
+    // chunk A plays through the whole replan+rectify window; chunk B after the swap.
+    for(let i=0;i<CTRL_STEPS;i++){
+      const c = i+0.5;
+      const afterSwap = c >= swapStep;
+      const x = X(c);
+      const y = laneCtrlY;
+      ctx.beginPath(); ctx.arc(x,y,4.5,0,7);
+      ctx.fillStyle = afterSwap ? css('--chunkB') : css('--chunkA');
+      ctx.fill();
+    }
+    // connective line
+    ctx.strokeStyle = css('--line'); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(X(0.5),laneCtrlY); ctx.lineTo(X(CTRL_STEPS-0.5),laneCtrlY); ctx.stroke();
+    // which chunk is driving — small labels under the dot lane
+    ctx.font='600 10px "JetBrains Mono",monospace'; ctx.textAlign='center';
+    ctx.fillStyle = css('--chunkA'); ctx.fillText('chunk A', X(swapStep/2), laneCtrlY+22);
+    ctx.fillStyle = css('--chunkB'); ctx.fillText('chunk B', X((swapStep+CTRL_STEPS)/2), laneCtrlY+22);
+
+    // ================= joint curve =================
+    // faint ground truth for reference
+    ctx.strokeStyle = css('--grid-strong'); ctx.lineWidth=1.5;
+    ctx.beginPath();
+    for(let i=0;i<=CTRL_STEPS*4;i++){ const st=i/4; const p=X(st),q=Y(truth(st)); i?ctx.lineTo(p,q):ctx.moveTo(p,q);}
+    ctx.stroke();
+
+    // Chunk A (indigo): the plan currently executing, from startup through the whole background
+    // window. It tracks the joint up to the swap.
+    ctx.strokeStyle = css('--chunkA'); ctx.lineWidth=3.2;
+    ctx.beginPath();
+    for(let i=0;i<=swapStep*4;i++){ const st=i/4; const p=X(st),q=Y(truth(st)); i?ctx.lineTo(p,q):ctx.moveTo(p,q);}
+    ctx.stroke();
+
+    // Chunk B — STALE counterfactual (red dashed): what replan alone produced, lagging reality by
+    // delta. This is what would have been served had we skipped the rectify beat.
+    ctx.strokeStyle = css('--stale'); ctx.lineWidth=2.4; ctx.setLineDash([6,4]);
+    ctx.beginPath();
+    for(let i=0;i<=40;i++){
+      const st = swapStep + i*0.25;
+      if(st>CTRL_STEPS) break;
+      const staleVal = truth(st - s.delta);   // stale lags reality by delta steps
+      const p=X(st), q=Y(staleVal); i?ctx.lineTo(p,q):ctx.moveTo(p,q);
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+
+    // Chunk B — RECTIFIED (amber): realigned to obs_new, so it lands back on the joint. This is
+    // what RSA actually serves after the swap.
+    ctx.strokeStyle = css('--chunkB'); ctx.lineWidth=3.2;
+    ctx.beginPath();
+    for(let i=0;i<=(CTRL_STEPS-swapStep)*4;i++){ const st=swapStep+i/4; const p=X(st),q=Y(truth(st)); i?ctx.lineTo(p,q):ctx.moveTo(p,q);}
+    ctx.stroke();
+
+    // seam dot at the swap — chunk A hands over to chunk B cleanly
+    ctx.beginPath(); ctx.arc(X(swapStep), Y(truth(swapStep)), 4.5, 0, 7);
+    ctx.fillStyle = css('--rectify'); ctx.fill();
+
+    // mark the stale error gap: distance between rectified (on truth) and stale counterfactual
+    const gapAt = Math.min(swapStep+3, CTRL_STEPS-1);
+    const gy1 = Y(truth(gapAt)), gy2 = Y(truth(gapAt - s.delta));
+    ctx.strokeStyle = css('--stale'); ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(X(gapAt),gy1); ctx.lineTo(X(gapAt),gy2); ctx.stroke();
+    ctx.fillStyle=css('--stale'); ctx.textAlign='left'; ctx.font='500 11px "JetBrains Mono",monospace';
+    ctx.fillText('stale gap (skipped rectify)', X(gapAt)+7, (gy1+gy2)/2+4);
+
+    // startup annotation (t0)
+    ctx.fillStyle=css('--muted'); ctx.textAlign='left'; ctx.font='italic 12px "Newsreader",serif';
+    ctx.fillText('t₀ — chunk A from a pure VLA replan, no rectify (startup)', X(0.4), curveTop-6);
+
+    updateReadout(s, swapStep);
+  }
+
+  function roundRect(x,y,w,h,r){
+    r=Math.min(r,h/2,Math.abs(w)/2);
+    ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+  }
+
+  function updateReadout(s, swapStep){
+    latV.textContent = s.lat+' ms';
+    rateV.textContent = s.rate+' Hz';
+    const cyclePeriod = (1000/3).toFixed(0); // 3 Hz inference
+    readout.innerHTML = `
+      <span class="chip"><span class="k">dt</span><b>${s.dt.toFixed(1)} ms/step</b></span>
+      <span class="chip"><span class="k">replan</span><b>${s.latSteps.toFixed(2)} steps</b></span>
+      <span class="chip big"><span class="k">delta</span><b>${s.delta}</b></span>
+      <span class="chip"><span class="k">rectify wait</span><b>~${s.rectifyMs} ms</b></span>
+      <span class="chip"><span class="k">control_delay</span><b>0</b></span>`;
+
+    // paradigm errors: stale error ∝ delta steps; RSA residual is small & ~flat.
+    const staleErr = (s.delta * s.dt).toFixed(0);
+    document.getElementById('err-async').textContent = `${s.delta} steps (${staleErr} ms lag)`;
+    document.getElementById('err-rsa').textContent = `≈ 0 (rectified)`;
+    document.getElementById('stall-sync').textContent = `${s.lat} ms/cycle`;
+    document.getElementById('err-sync').textContent = `0`;
+    document.getElementById('wait-rsa').textContent = `~${s.rectifyMs} ms`;
+  }
+
+  // ================= three-paradigm comparison canvas =================
+  const cmp = document.getElementById('cmp');
+  const cctx = cmp.getContext('2d');
+
+  function drawCmp(){
+    const s = state();
+    const W = cmp.width, Hp = cmp.height;
+    cctx.clearRect(0,0,W,Hp);
+
+    const padL = 150, padR = 40, padT = 18;
+    const plotW = W - padL - padR;
+
+    // --- schematic time axis (NOT the real horizon) -----------------------------------
+    // The two chunks are drawn short so the seam/overlap between them is large and legible.
+    // Axis unit = "schematic step" u in [0, U]. Chunk A spans [aStart, aEnd], chunk B starts
+    // later; how B attaches to A is what differs per paradigm.
+    const U = 20;                        // schematic axis length
+    const X = u => padL + (u/U)*plotW;
+
+    const aStart = 1.5;                  // chunk A begins
+    const aEnd   = 11;                   // chunk A's plan ends here (end of its horizon)
+    const bLen   = aEnd - aStart;        // chunks share a length
+    const overlap = 4.2;                 // how much B's plan overlaps A's (magnified)
+
+    // Two joint trajectories, one per chunk. Both track the same underlying motion, but chunk B
+    // (newer inference) sees a slightly fresher world, so its curve is the "more correct" one.
+    // Drawn in schematic-step space; amplitude normalized 0..1.
+    const qA = u => 0.5 + 0.30*Math.sin((u-aStart)/8.5*Math.PI*1.6 - 0.2)
+                        - 0.09*Math.cos((u-aStart)/8.5*Math.PI*3.0);
+    // B is A shifted up-to-date: same shape, nudged to the fresher target (a small offset that
+    // grows over the chunk — the drift RSA's rectifier removes and smoothing only blurs).
+    const qB = u => qA(u) + 0.11 + 0.015*(u);
+
+    const lanes = [
+      {
+        key:'sync',
+        title:'Synchronous', tag:'wait, then attach', accent:'--muted',
+        note:()=>`arm frozen ${s.lat} ms · no overlap`,
+      },
+      {
+        key:'smooth',
+        title:'Original async + temporal ensembling', tag:'overlap, blended', accent:'--stale',
+        note:()=>`chunks cross · fused over ${s.delta} steps`,
+      },
+      {
+        key:'rsa',
+        title:'RSA · this work', tag:'rectify, then attach', accent:'--rectify',
+        note:()=>`~${s.rectifyMs} ms gap · realigned`,
+      },
+    ];
+
+    const laneH = 210, laneGap = 24;
+
+    // gap that B is delayed by, per paradigm, in schematic steps:
+    //  sync  = full VLA latency (big plateau)
+    //  rsa   = tiny rectify wait (small gap)
+    const syncGap = Math.max(2.2, (s.lat/1000) * 6);       // scales a bit with slider, stays visible
+    const rsaGap  = 0.7;                                    // ~5 ms — deliberately tiny
+
+    lanes.forEach((L,li)=>{
+      const top = padT + li*(laneH+laneGap);
+      const cH = laneH - 70;
+      const cTop = top + 44;
+      const Y = v => cTop + (1-v)*cH;
+      const drawCurve = (fn, u0, u1, col, width, alpha, dash)=>{
+        cctx.save();
+        cctx.strokeStyle = col; cctx.lineWidth = width; cctx.globalAlpha = alpha;
+        if(dash) cctx.setLineDash(dash);
+        cctx.beginPath();
+        const N = 120;
+        for(let i=0;i<=N;i++){ const u=u0+(u1-u0)*i/N; const p=X(u),q=Y(fn(u)); i?cctx.lineTo(p,q):cctx.moveTo(p,q); }
+        cctx.stroke();
+        cctx.restore();
+      };
+      const dots = (fn, u0, u1, col)=>{
+        cctx.fillStyle = col;
+        for(let u=Math.ceil(u0*2)/2; u<=u1+1e-6; u+=0.9){
+          cctx.beginPath(); cctx.arc(X(u), Y(fn(u)), 3.1, 0, 2*Math.PI); cctx.fill();
+        }
+      };
+
+      // lane card bg
+      cctx.fillStyle = css('--panel');
+      roundRectOn(cctx, padL-8, top+2, plotW+16, laneH-8, 10);
+      cctx.fill();
+
+      // title + tag
+      cctx.textAlign='left';
+      cctx.fillStyle = css('--ink');
+      cctx.font='600 16px "Space Grotesk",sans-serif';
+      cctx.fillText(L.title, padL, top+24);
+      cctx.fillStyle = css(L.accent);
+      cctx.font='600 11px "JetBrains Mono",monospace';
+      cctx.fillText('· '+L.tag.toUpperCase(), padL + cctx.measureText(L.title).width + 12, top+23);
+
+      // right-aligned note
+      cctx.textAlign='right';
+      cctx.fillStyle = css('--ink-soft');
+      cctx.font='500 12px "JetBrains Mono",monospace';
+      cctx.fillText(L.note(), padL+plotW, top+23);
+
+      // faint baseline grid
+      cctx.strokeStyle = css('--grid'); cctx.lineWidth=1;
+      for(let g=0;g<=4;g++){ const y=cTop+cH*g/4; cctx.beginPath(); cctx.moveTo(padL,y); cctx.lineTo(padL+plotW,y); cctx.stroke(); }
+
+      const cA = css('--chunkA'), cAs = css('--chunkA-soft');
+      const cB = css('--chunkB'), cBs = css('--chunkB-soft');
+
+      if(L.key==='sync'){
+        // Chunk A runs to its end.
+        drawCurve(qA, aStart, aEnd, cA, 3.2, 1, null);
+        dots(qA, aStart, aEnd, cA);
+        // Arm frozen: plateau at A's last value while the VLA computes B.
+        const hold = qA(aEnd);
+        const bStart = aEnd + syncGap;
+        cctx.save();
+        cctx.fillStyle = css('--replan-soft');
+        cctx.fillRect(X(aEnd), cTop, X(bStart)-X(aEnd), cH);
+        cctx.strokeStyle = css('--replan'); cctx.lineWidth=2.4; cctx.setLineDash([5,4]);
+        cctx.beginPath(); cctx.moveTo(X(aEnd),Y(hold)); cctx.lineTo(X(bStart),Y(hold)); cctx.stroke();
+        cctx.restore();
+        cctx.fillStyle = css('--replan'); cctx.textAlign='center'; cctx.font='600 11px "JetBrains Mono",monospace';
+        cctx.fillText('VLA busy — arm frozen '+s.lat+' ms', (X(aEnd)+X(bStart))/2, Y(hold)-10);
+        // frozen dots along the plateau
+        cctx.fillStyle = css('--replan');
+        for(let u=aEnd; u<=bStart+1e-6; u+=0.9){ cctx.beginPath(); cctx.arc(X(u),Y(hold),3.1,0,2*Math.PI); cctx.fill(); }
+        // Chunk B attaches AFTER the wait, starting from where A left off (no overlap).
+        const qBsync = u => qB(u) - (qB(bStart) - hold);   // shift B so it connects to the plateau
+        drawCurve(qBsync, bStart, bStart+bLen, cB, 3.2, 1, null);
+        dots(qBsync, bStart, bStart+bLen, cB);
+      }
+
+      else if(L.key==='smooth'){
+        // Async never waits: B's plan is issued while A is still running, so the two chunks
+        // OVERLAP. Overlap window = [aEnd-overlap, aEnd]. Both plans cover it — they cross.
+        const ov0 = aEnd - overlap, ov1 = aEnd;
+        // Chunk A: solid before overlap, faded inside it (it is being retired).
+        drawCurve(qA, aStart, ov0, cA, 3.2, 1, null);
+        drawCurve(qA, ov0, aEnd, cA, 2.4, 0.5, [6,4]);
+        // Chunk B: starts inside the overlap (issued early), faded there, solid after.
+        drawCurve(qB, ov0, ov1, cB, 2.4, 0.5, [6,4]);
+        drawCurve(qB, ov1, ov1+ (bLen-overlap), cB, 3.2, 1, null);
+        // shade the crossing region
+        cctx.save();
+        cctx.fillStyle = css('--stale-soft'); cctx.globalAlpha=0.5;
+        cctx.fillRect(X(ov0), cTop, X(ov1)-X(ov0), cH); cctx.globalAlpha=1; cctx.restore();
+        cctx.fillStyle = css('--stale'); cctx.textAlign='center'; cctx.font='600 10px "JetBrains Mono",monospace';
+        cctx.fillText('overlap — two plans cross', (X(ov0)+X(ov1))/2, cTop+12);
+        // Temporal ensembling: served value = weighted avg, ramping from A→B across the overlap.
+        const fuse = u => { const w = Math.min(1, Math.max(0, (u-ov0)/(ov1-ov0))); return (1-w)*qA(u) + w*qB(u); };
+        // served path: A before overlap, fused across it, B after.
+        cctx.strokeStyle = css('--ink'); cctx.lineWidth=3.2;
+        cctx.beginPath();
+        const N=160, u0=aStart, u1=ov1+(bLen-overlap);
+        for(let i=0;i<=N;i++){ const u=u0+(u1-u0)*i/N; let v; if(u<ov0)v=qA(u); else if(u<=ov1)v=fuse(u); else v=qB(u); const p=X(u),q=Y(v); i?cctx.lineTo(p,q):cctx.moveTo(p,q); }
+        cctx.stroke();
+        // dots on the fused/served path in the overlap to read the blend
+        cctx.fillStyle = css('--ink');
+        for(let u=ov0; u<=ov1+1e-6; u+=0.9){ cctx.beginPath(); cctx.arc(X(u),Y(fuse(u)),3.1,0,2*Math.PI); cctx.fill(); }
+        cctx.fillStyle = css('--ink-soft'); cctx.textAlign='center'; cctx.font='500 10px "JetBrains Mono",monospace';
+        cctx.fillText('weighted avg (temporal ensembling)', (X(ov0)+X(ov1))/2, Y(fuse((ov0+ov1)/2))+22);
+      }
+
+      else { // rsa
+        // Chunk A runs to its end, then a TINY rectify gap, then B (rectified) — realigned to now,
+        // so it attaches cleanly with almost no wait and no blur.
+        drawCurve(qA, aStart, aEnd, cA, 3.2, 1, null);
+        dots(qA, aStart, aEnd, cA);
+        const bStart = aEnd + rsaGap;
+        cctx.save();
+        cctx.fillStyle = css('--rectify-soft');
+        cctx.fillRect(X(aEnd), cTop, X(bStart)-X(aEnd), cH);
+        cctx.restore();
+        cctx.fillStyle = css('--rectify'); cctx.textAlign='center'; cctx.font='600 10px "JetBrains Mono",monospace';
+        cctx.fillText('↕ rectify ~'+s.rectifyMs+'ms', (X(aEnd)+X(bStart))/2, cTop+12);
+        // B rectified: realigned so it connects at A's endpoint (the rectifier pulls the stale
+        // plan onto the fresh observation → clean seam, no plateau, no crossfade).
+        const qBrsa = u => qB(u) - (qB(bStart) - qA(aEnd));
+        drawCurve(qBrsa, bStart, bStart+bLen, cB, 3.2, 1, null);
+        dots(qBrsa, bStart, bStart+bLen, cB);
+        // arrow marking the small gap
+        cctx.strokeStyle=css('--rectify'); cctx.lineWidth=2; cctx.setLineDash([]);
+        cctx.beginPath(); cctx.moveTo(X(aEnd),Y(qA(aEnd))); cctx.lineTo(X(bStart),Y(qBrsa(bStart))); cctx.stroke();
+      }
+    });
+
+    // shared axis label
+    cctx.fillStyle=css('--muted'); cctx.textAlign='left';
+    cctx.font='500 11px "JetBrains Mono",monospace';
+    cctx.fillText('time →   (overlap region magnified; chunks drawn short so the seam is visible)', padL, Hp-8);
+  }
+
+  function roundRectOn(c,x,y,w,h,r){
+    r=Math.min(r,h/2,Math.abs(w)/2);
+    c.beginPath();
+    c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r);
+    c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath();
+  }
+
+  function render(){ draw(); drawCmp(); }
+
+  latEl.addEventListener('input', render);
+  rateEl.addEventListener('input', render);
+  const mq = window.matchMedia('(prefers-color-scheme:dark)');
+  mq.addEventListener && mq.addEventListener('change', render);
+  new MutationObserver(render).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+  render();
+})();
+</script>
