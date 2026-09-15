@@ -1,6 +1,10 @@
-<title>RSA Chunk Timing</title>
+<!doctype html>
+<html lang="en">
+<head>
 <meta charset="utf-8">
+<title>RSA: Rectify Stale Action: Latency-Aware Async Inference for Vision-Language-Action</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="RSA combines asynchronous VLA inference with a short synchronized action-rectification step. Explore the method, interactive timing demo, and simulation and real-robot results.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=JetBrains+Mono:wght@400;500;600&display=swap">
@@ -151,15 +155,124 @@
   .paper-figure figcaption{margin-top:16px; color:var(--ink-soft); font-size:15px; line-height:1.6}
   .paper-figure figcaption strong{color:var(--ink)}
   .paper-figure-nav a:focus-visible,.paper-figure a:focus-visible{outline:3px solid var(--rectify); outline-offset:4px}
+  /* Research homepage: author block, summary, and measured results. */
+  .paper-header{padding-bottom:28px; border-bottom:1px solid var(--line)}
+  .paper-header h1{line-height:1.12; max-width:100%; margin-bottom:26px}
+  .paper-title-name{display:block; color:var(--rectify); margin-bottom:10px}
+  .paper-title-detail{display:block; font-size:.68em; line-height:1.25}
+  .authors{display:flex; flex-wrap:wrap; gap:8px 24px; font-family:"Space Grotesk",system-ui,sans-serif; font-size:19px; margin:0 0 10px}
+  .authors span{white-space:nowrap}
+  .authors sup{font-size:.7em; color:var(--rectify)}
+  .affiliation{font-family:"Space Grotesk",system-ui,sans-serif; font-size:14px; color:var(--ink-soft); margin:0 0 8px}
+  .author-note{font-size:14px; color:var(--ink-soft); margin:4px 0; overflow-wrap:anywhere}
+  .author-note a{color:var(--rectify); text-underline-offset:3px}
+  .paper-summary{font-size:clamp(18px,2.2vw,21px); line-height:1.65; max-width:78ch; margin:26px 0 12px; color:var(--ink-soft)}
+  .paper-summary strong{color:var(--ink); font-weight:600}
+  .paper-training{color:var(--ink-soft); font-size:16px; max-width:85ch; margin:0}
+  .page-nav{display:flex; flex-wrap:wrap; gap:10px; margin:24px 0 0; font-family:"Space Grotesk",system-ui,sans-serif; font-size:14px}
+  .page-nav a{display:inline-block; border:1px solid var(--line); border-radius:8px; padding:9px 15px; text-decoration:none; color:var(--ink); background:var(--panel)}
+  .page-nav a:first-child{background:var(--rectify-soft); color:var(--rectify); border-color:transparent}
+  .page-nav a:hover{border-color:var(--rectify)}
+  .page-nav a:focus-visible,.author-note a:focus-visible{outline:3px solid var(--rectify); outline-offset:3px}
+  .headline-results{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin-top:28px}
+  .headline-result{padding:20px; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius)}
+  .headline-result strong{display:block; font-family:"Space Grotesk",system-ui,sans-serif; font-size:34px; font-weight:600; line-height:1.2; color:var(--rectify)}
+  .headline-result .metric-label{display:block; font-family:"Space Grotesk",system-ui,sans-serif; font-size:14px; margin-top:8px}
+  .headline-result small{display:block; font-size:13px; color:var(--ink-soft); line-height:1.5; margin-top:5px}
+  #interactive-demo,#results{scroll-margin-top:24px}
+  .demo-intro{margin-top:40px}
+  .demo-intro .lede{font-size:17px; margin-top:10px}
+  .demo-intro + section{margin-top:24px}
+  .demo-note{border-left:3px solid var(--rectify); padding-left:14px; margin:16px 0 0; font-size:14px; color:var(--ink-soft); max-width:88ch}
+  .results-section h3{font-family:"Space Grotesk",system-ui,sans-serif; font-size:19px; line-height:1.4; margin:0 0 10px}
+  .results-section p{color:var(--ink-soft); font-size:16px; margin:0 0 16px}
+  .results-section p:last-child{margin-bottom:0}
+  .results-section strong{color:var(--ink)}
+  .results-section .sub{font-size:15px; color:var(--muted); margin-bottom:20px}
+  .results-section .result-label{font-family:"JetBrains Mono",monospace; font-size:11px; letter-spacing:.09em; text-transform:uppercase; color:var(--rectify); margin-bottom:8px}
+  .results-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; margin-top:20px}
+  .results-grid > *{min-width:0}
+  .results-table-scroll{overflow-x:auto; margin:20px 0 14px; border:1px solid var(--line); border-radius:10px}
+  .results-table-scroll:focus-visible{outline:3px solid var(--rectify); outline-offset:3px}
+  .results-table{border-collapse:collapse; width:100%; min-width:650px; font-family:"Space Grotesk",system-ui,sans-serif; font-size:14px; font-variant-numeric:tabular-nums}
+  .results-table caption{text-align:left; padding:14px; font-size:13px; color:var(--ink-soft)}
+  .results-table th,.results-table td{padding:12px 10px; border-top:1px solid var(--line); text-align:center}
+  .results-table thead{background:var(--grid)}
+  .results-table tbody th{text-align:left; white-space:nowrap}
+  .results-table .ours{background:var(--rectify-soft); font-weight:600}
+  .results-section .result-note{font-size:13px; line-height:1.6}
+  .latency-result{margin-top:20px; border-left:4px solid var(--rectify)}
+  .story-section{scroll-margin-top:24px}
+  .story-section .steps{gap:22px}
+  .story-section .steps li{font-size:16px; line-height:1.65}
+  .story-section .steps li strong{color:var(--ink)}
+  .story-takeaway{margin:24px 0 0; padding-top:20px; border-top:1px solid var(--line); color:var(--ink-soft); font-size:17px}
+  .story-takeaway strong{color:var(--ink)}
+  .figure-reading{margin-top:18px; padding-top:18px; border-top:1px solid var(--line); font-size:15px; color:var(--ink-soft)}
+  .figure-reading h4{font-family:"Space Grotesk",system-ui,sans-serif; font-size:15px; margin:0 0 8px; color:var(--ink)}
+  .figure-reading p{margin:0 0 10px}
+  .figure-reading p:last-child{margin-bottom:0}
+  @media(max-width:720px){
+    .headline-results,.results-grid{grid-template-columns:1fr}
+    .headline-result{padding:16px 20px}
+    .authors{gap:8px 18px; font-size:17px}
+    .paper-title-detail{font-size:.72em}
+  }
 </style>
+</head>
+<body>
 
 <div class="wrap">
+  <header class="paper-header">
+    <p class="eyebrow">RSA · Research project</p>
+    <h1><span class="paper-title-name">RSA: Rectify Stale Action:</span> <span class="paper-title-detail">Latency-Aware Async Inference for Vision-Language-Action</span></h1>
+    <p class="authors" aria-label="Authors">
+      <span>Jie Wu<sup>†</sup></span>
+      <span>Xudong Huang<sup>†</sup></span>
+      <span>Xu Gu</span>
+      <span>Shujie Wang<sup>*</sup></span>
+    </p>
+    <p class="affiliation">Beijing Xiaoyu Intelligent Manufacturing Technology Co., Ltd. · Beijing, China</p>
+    <p class="author-note">† Equal contribution. Jie Wu and Xudong Huang contributed as interns at the company.</p>
+    <p class="author-note">* Corresponding author: <a href="mailto:wangshujie@xiaoyubot.com">wangshujie@xiaoyubot.com</a></p>
+    <p class="paper-summary"><strong>Heavy VLA inference stays asynchronous; lightweight rectification adds a short synchronized wait at each handoff to realign actions with the latest observation.</strong> A chunk generated from obs(t) arrives at obs(t+Δ). RSA updates this stale plan before the controller starts the corrected chunk from its first action.</p>
+    <p class="paper-training">A plug-in DiT rectifier learns through <strong>Brownian-bridge endpoint matching</strong>, inspired by the Schrödinger-bridge perspective. Distillation reuses the VLA's existing SFT data with random delays and shared sampling noise, while keeping the base VLA frozen.</p>
+    <nav class="page-nav" aria-label="Explore this project">
+      <a href="#why-rsa">Why RSA ↓</a>
+      <a href="#results">Experimental results ↓</a>
+      <a href="#interactive-demo">Interactive timing demo ↓</a>
+      <a href="#paper-figures">Method in three figures ↓</a>
+    </nav>
+    <div class="headline-results" role="group" aria-label="Selected measured results">
+      <div class="headline-result"><strong>~5 ms</strong><span class="metric-label">Mean end-to-end rectification</span><small>DiT · RTX 4090 · five sampling steps</small></div>
+      <div class="headline-result"><strong>19/20</strong><span class="metric-label">Hard pick-and-place successes</span><small>Moving object · 100 ms additional VLA delay</small></div>
+      <div class="headline-result"><strong>15/20</strong><span class="metric-label">Fold Box successes</span><small>Sequential folding · 100 ms additional VLA delay</small></div>
+    </div>
+  </header>
+
+  <section class="story-section" id="why-rsa" aria-labelledby="why-rsa-title">
+    <h2 id="why-rsa-title">Why RSA: update the plan when the world has moved on</h2>
+    <p class="sub">The story behind the method, from an unavoidable inference delay to a short feedback correction.</p>
+    <div class="card">
+      <ol class="steps">
+        <li><strong>Inference takes time; the scene keeps changing.</strong> A VLA observes the robot and scene at obs(t), then spends time encoding images, processing context, and generating an action chunk. By the time that chunk returns, the observation is obs(t+Δ). In moving-object grasping or precise box folding, this gap can make an otherwise useful plan stale. <a class="paper-figure-original" href="#paper-figure-1">Figure 1 shows the timing problem.</a></li>
+        <li><strong>Asynchronous execution keeps actions available, but fresh feedback is still needed.</strong> Running the VLA alongside the previous action chunk avoids waiting through the full inference interval. It does not update the observation used to generate the returning chunk. Re-querying the full VLA on the latest observation would incur another long delay. RSA instead reuses the returned plan and retained context as the starting point for correction.</li>
+        <li><strong>Teach a small network how the frozen VLA would revise that plan.</strong> Using the existing SFT dataset, we simulate random delays and ask the same frozen VLA for chunks at obs(t) and obs(t+Δ). Shared sampling noise pairs the stale chunk with its teacher chunk. A DiT learns Brownian-bridge endpoint matching from the stale source toward the teacher output through endpoint MSE. The Schrödinger-bridge perspective motivates the distribution update; RSA uses paired bridge supervision rather than claiming an exact optimal bridge solution. <a class="paper-figure-original" href="#paper-figure-2">Figure 2 shows this distillation process.</a></li>
+        <li><strong>Spend a short wait to let the latest observation affect the next action.</strong> At handoff, the controller pauses its action cursor, reads the latest observation, and holds the last command until the rectifier finishes. It then installs the full corrected chunk and starts at index zero. Heavy inference stays asynchronous; the lightweight update is synchronized with execution. This uses the observation at every handoff before issuing the first corrected action. <a class="paper-figure-original" href="#paper-figure-3">Figure 3 shows the online schedule.</a></li>
+      </ol>
+      <p class="story-takeaway"><strong>Three connected ideas:</strong> combine asynchronous VLA generation with a short synchronous correction; attach a separately distilled rectifier to an already SFT-trained VLA; and incorporate the latest observation at every chunk handoff. The approximately 5 ms correction wait improves feedback freshness while the physical scene continues to evolve.</p>
+    </div>
+  </section>
+
+  <div class="demo-intro" id="interactive-demo">
   <p class="eyebrow">Rectifying Stale Actions · deployment timing</p>
-  <h1>Async VLA, synchronous rectify</h1>
+  <h2>Async VLA, synchronous rectify</h2>
   <p class="lede">A single joint, plotted against wall-clock time. The frozen VLA replans in the
   <b>background</b> while control keeps executing the old chunk; the moment it returns, ~5&nbsp;ms
   of rectification pulls that stale chunk back onto the freshest observation before it is served.
   Drag the VLA latency to watch <b>delta</b> and the swap point move.</p>
+  <p class="demo-note">The interactive curves below are schematic illustrations, not measured trajectories or accuracy results. In the deployed RSA system, the action cursor pauses during rectification while the controller holds its last command; sensing and the scene continue. The experiment section reports the measured outcomes.</p>
+  </div>
 
   <section>
     <div class="card">
@@ -244,6 +357,57 @@
     </div>
   </section>
 
+  <section class="results-section" id="results" aria-labelledby="results-title">
+    <h2 id="results-title">Experimental results</h2>
+    <p class="sub">Real-robot task outcomes, controlled simulation, and offline action agreement probe different aspects of RSA.</p>
+
+    <article class="card">
+      <p class="result-label">Real robot · DiT rectifier</p>
+      <h3>Correcting stale actions in manipulation</h3>
+      <p>We evaluate three tasks with <strong>100 ms of additional VLA inference delay</strong> and <strong>20 attempts per method and task</strong>. Easy pick-and-place uses an isolated object and an unobstructed target; Hard includes an object that moves during execution; Fold Box requires sequential panel folding, flap alignment, and closure.</p>
+      <div class="results-table-scroll" role="region" aria-label="Real-robot results; scroll horizontally on small screens" tabindex="0">
+        <table class="results-table" aria-describedby="robot-results-note">
+          <caption>Success counts and mean completion times on successful trials</caption>
+          <thead>
+            <tr><th scope="col" rowspan="2">Method</th><th scope="colgroup" colspan="2">Pick-and-Place Easy</th><th scope="colgroup" colspan="2">Pick-and-Place Hard</th><th scope="colgroup" colspan="2">Fold Box</th></tr>
+            <tr><th scope="col">Success / 20</th><th scope="col">Time (s)</th><th scope="col">Success / 20</th><th scope="col">Time (s)</th><th scope="col">Success / 20</th><th scope="col">Time (s)</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Sync</th><td>20/20</td><td>15.6</td><td>11/20</td><td>32.1</td><td>6/20</td><td>41.3</td></tr>
+            <tr><th scope="row">Naive Async</th><td>19/20</td><td>14.2</td><td>13/20</td><td>28.6</td><td>7/20</td><td>38.4</td></tr>
+            <tr><th scope="row">RTC</th><td>20/20</td><td>10.9</td><td>8/20</td><td>23.1</td><td>0/20</td><td>—</td></tr>
+            <tr class="ours"><th scope="row">RSA (ours)</th><td>20/20</td><td>11.4</td><td>19/20</td><td>19.7</td><td>15/20</td><td>27.2</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="result-note" id="robot-results-note">Times are averages over successful trials only; methods can succeed on different trial subsets. A dash means there was no successful trial. Dispersion is not reported.</p>
+      <p>RSA completes <strong>19/20 Hard trials</strong> and <strong>15/20 Fold Box trials</strong>. On Easy, RSA, RTC, and Sync all reach 20/20, with RTC recording the shortest mean successful completion time. These results evaluate the complete DiT-based system; they do not isolate the effects of the bridge, backbone, or short synchronization interval.</p>
+    </article>
+
+    <div class="results-grid">
+      <article class="card">
+        <p class="result-label">Simulation · Kinetix</p>
+        <h3>Correction under larger delays</h3>
+        <p>At <strong>Δ = 4 environment steps</strong>, RSA reaches <strong>76.8% success</strong>, compared with 61.8% for RTC, 55.7% for BID, and 49.0% for Naive Async. Results average 12 levels and all feasible execution horizons, with 2,048 rollouts per level and delay–horizon pair. Learned variants average three training seeds; each baseline uses one evaluation run.</p>
+        <p>Kinetix uses a compact MLP-Mixer for symbolic state observations to test the correction formulation. Its discrete correction cost adds no whole environment step, unlike the measured wall-clock DiT wait on the robot. Benefits depend on delay: RTC leads RSA by 2.1 percentage points at Δ = 1.</p>
+        <p class="result-note">At Δ = 4, RSA w/o bridge reaches 75.5%. That comparison changes the source, path, and sampler together, so it does not isolate the bridge path alone.</p>
+      </article>
+      <article class="card">
+        <p class="result-label">Offline · Recorded Fold Box episodes</p>
+        <h3>Action agreement at unseen delays</h3>
+        <p>Rectifiers trained at <strong>Δ = 2–6</strong> are evaluated at Δ = 1–8 using 11 recorded demonstrations at 30 Hz. At unseen delay Δ = 1, RSA's expert-action agreement is <strong>0.622</strong>, versus 0.388 without the bridge; at Δ = 8, it is <strong>0.467</strong>, versus 0.327.</p>
+        <p>Agreement requires every component of a normalized 14-dimensional action to be within 0.1 of the expert action. Scores are averaged within each episode and then across episodes; each method and delay uses the same 13,090 timesteps.</p>
+        <p class="result-note">This measures offline action agreement, not closed-loop success at unseen delays. Both policy and rectifier use ten sampling steps here; the ~5 ms deployment measurement uses five DiT steps.</p>
+      </article>
+    </div>
+
+    <article class="card latency-result">
+      <p class="result-label">Deployment cost</p>
+      <h3>Approximately 5 ms for a complete rectifier pass</h3>
+      <p>The DiT rectifier runs on an <strong>NVIDIA GeForce RTX 4090 with five bridge-sampling steps</strong>. Approximately 5 ms is the <strong>mean across repeated end-to-end measurements</strong>, including visual encoding, KV encoding, communication, and host–device transfer. The controller waits for actual completion rather than a fixed timer. The VLA remains frozen, and rectifier distillation reuses its existing SFT dataset.</p>
+    </article>
+  </section>
+
   <section class="paper-figures" id="paper-figures" aria-labelledby="paper-figures-title">
     <h2 id="paper-figures-title">RSA in three figures</h2>
     <p class="sub">The paper's inference workflows, distillation process, and online handoff. Select a figure to view the full-resolution image.</p>
@@ -261,7 +425,14 @@
       <a class="paper-figure-image" href="figures/rsa_figure1.png" target="_blank" rel="noopener" aria-label="Open Figure 1 at full resolution in a new tab">
         <img src="figures/rsa_figure1.png" width="4385" height="3254" loading="lazy" decoding="async" alt="Synchronous and asynchronous VLA inference workflows, showing how inference latency separates the input observation from the scene at execution.">
       </a>
-      <figcaption>Synchronous execution waits for the VLA result; asynchronous execution overlaps inference with the previous action chunk. A plan computed from <strong>obs(t)</strong> becomes available at <strong>obs(t+Δ)</strong>, motivating correction with the latest observation.</figcaption>
+      <figcaption>
+        <p>Synchronous execution waits for the VLA result; asynchronous execution overlaps inference with the previous action chunk. A plan computed from <strong>obs(t)</strong> becomes available at <strong>obs(t+Δ)</strong>, motivating correction with the latest observation.</p>
+        <div class="figure-reading">
+          <h4>Read the figure: where the mismatch comes from</h4>
+          <p>Follow the observation, inference interval, and execution timeline in each workflow. The synchronous workflow holds the command while the policy computes; the asynchronous workflow continues consuming the old plan. Both make the time needed for VLA inference visible.</p>
+          <p><strong>Role in the story:</strong> the figure introduces how both workflows operate and why asynchronous action supply alone does not refresh the returned plan. This motivates a correction driven by the observation available at handoff.</p>
+        </div>
+      </figcaption>
     </figure>
 
     <figure class="card paper-figure" id="paper-figure-2">
@@ -272,7 +443,15 @@
       <a class="paper-figure-image" href="figures/rsa_figure2.png" target="_blank" rel="noopener" aria-label="Open Figure 2 at full resolution in a new tab">
         <img src="figures/rsa_figure2.png" width="6222" height="1923" loading="lazy" decoding="async" alt="Training diagram: a frozen VLA supplies a stale chunk and KV context from the earlier observation and a teacher chunk from the delayed observation to supervise a DiT rectifier.">
       </a>
-      <figcaption>Training reuses the VLA's <strong>existing SFT data</strong>, sampling observation pairs at random delays. The frozen VLA uses shared sampling noise to produce stale and teacher chunks. <strong>Brownian-bridge endpoint matching</strong>, inspired by the Schrödinger-bridge perspective, trains the DiT and its conditioning encoders from the stale chunk toward the teacher endpoint. The teacher chunk provides training supervision only.</figcaption>
+      <figcaption>
+        <p>Training reuses the VLA's <strong>existing SFT data</strong>, sampling observation pairs at random delays. The frozen VLA uses shared sampling noise to produce stale and teacher chunks. <strong>Brownian-bridge endpoint matching</strong>, inspired by the Schrödinger-bridge perspective, trains the DiT and its conditioning encoders from the stale chunk toward the teacher endpoint. The teacher chunk provides training supervision only.</p>
+        <div class="figure-reading">
+          <h4>Read the figure: one frozen VLA, two observation times</h4>
+          <p>The earlier pass supplies the stale chunk and retained KV context. The later pass supplies the <strong>teacher chunk</strong> from obs(t+Δ). The rectifier uses the stale plan, fresh observation, retained context, and delay; the teacher arrow denotes the loss target, not an input required at deployment.</p>
+          <p>Training samples an intermediate state along a noisy Brownian bridge between the paired chunks. The DiT predicts an endpoint correction and minimizes its MSE against the teacher endpoint. At inference, sampling starts from the <strong>complete stale chunk</strong>; no fresh teacher query is needed.</p>
+          <p><strong>Role in the story:</strong> an independently distilled correction module reuses the task-adapted VLA and its SFT data. The base VLA stays frozen, while the rectifier and its conditioning encoders learn the update.</p>
+        </div>
+      </figcaption>
     </figure>
 
     <figure class="card paper-figure" id="paper-figure-3">
@@ -283,7 +462,14 @@
       <a class="paper-figure-image" href="figures/rsa_figure3.png" target="_blank" rel="noopener" aria-label="Open Figure 3 at full resolution in a new tab">
         <img src="figures/rsa_figure3.png" width="4999" height="3784" loading="lazy" decoding="async" alt="RSA deployment: execute the previous chunk during VLA inference, briefly hold the last command during rectification, then execute the complete corrected chunk from its first action.">
       </a>
-      <figcaption><strong>Heavy VLA inference stays asynchronous; lightweight rectification briefly synchronizes the handoff so the latest observation can update the action chunk before execution.</strong> During correction, the action cursor pauses and the controller holds its last command. It waits for the actual result, installs the complete corrected chunk, and resumes from index zero. The DiT averages <strong>approximately 5 ms end to end on an RTX 4090 with five sampling steps</strong>, including visual and KV encoding, communication, and host–device transfer. Sensing and the physical scene continue during this short wait.</figcaption>
+      <figcaption>
+        <p><strong>Heavy VLA inference stays asynchronous; lightweight rectification briefly synchronizes the handoff so the latest observation can update the action chunk before execution.</strong> During correction, the action cursor pauses and the controller holds its last command. It waits for the actual result, installs the complete corrected chunk, and resumes from index zero. The DiT averages <strong>approximately 5 ms end to end on an RTX 4090 with five sampling steps</strong>, including visual and KV encoding, communication, and host–device transfer. Sensing and the physical scene continue during this short wait.</p>
+        <div class="figure-reading">
+          <h4>Read the figure: follow the chunk handoff</h4>
+          <p>First, the previous rectified chunk executes while the VLA computes the next plan. When that plan returns, the controller pauses sequence advancement and captures obs(t+Δ). The short gap is the rectifier's actual computation interval. After completion, execution begins at the first action of the new, complete chunk, with <strong>no discarded prefix</strong>.</p>
+          <p><strong>Role in the story:</strong> the latest handoff observation influences the chunk before it starts executing. The narrow waiting region conveys a short correction interval; approximately 5 ms is a measured mean, not a fixed sleep or a worst-case latency bound. Feedback still has this small delay, and correction is performed at chunk handoffs rather than on every camera frame.</p>
+        </div>
+      </figcaption>
     </figure>
   </section>
 
@@ -724,3 +910,5 @@
   render();
 })();
 </script>
+</body>
+</html>
