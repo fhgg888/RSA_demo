@@ -212,6 +212,17 @@
   .figure-reading h4{font-family:"Space Grotesk",system-ui,sans-serif; font-size:15px; margin:0 0 8px; color:var(--ink)}
   .figure-reading p{margin:0 0 10px}
   .figure-reading p:last-child{margin-bottom:0}
+  /* Video is served beside the paper figures on GitHub Pages. */
+  .project-video{scroll-margin-top:24px}
+  .project-video-frame{margin:0}
+  .project-video-player{
+    display:block; width:100%; height:auto; max-height:80vh; aspect-ratio:1692/720;
+    object-fit:contain; background:#101114; border:1px solid var(--line);
+    border-radius:10px;
+  }
+  .project-video-caption{margin-top:14px; color:var(--ink-soft); font-size:14px; line-height:1.6}
+  .project-video-caption a{color:var(--rectify); text-underline-offset:3px}
+  .project-video-player:focus-visible,.project-video-caption a:focus-visible{outline:3px solid var(--rectify); outline-offset:4px}
   @media(max-width:720px){
     .headline-results,.results-grid{grid-template-columns:1fr}
     .headline-result{padding:16px 20px}
@@ -238,6 +249,7 @@
     <p class="paper-summary"><strong>Heavy VLA inference stays asynchronous; lightweight rectification adds a short synchronized wait at each handoff to realign actions with the latest observation.</strong> A chunk generated from obs(t) arrives at obs(t+Δ). RSA updates this stale plan before the controller starts the corrected chunk from its first action.</p>
     <p class="paper-training">A plug-in DiT rectifier learns through <strong>Brownian-bridge endpoint matching</strong>, inspired by the Schrödinger-bridge perspective. Distillation reuses the VLA's existing SFT data with random delays and shared sampling noise, while keeping the base VLA frozen.</p>
     <nav class="page-nav" aria-label="Explore this project">
+      <a href="#project-video">Watch video ↓</a>
       <a href="#why-rsa">Why RSA ↓</a>
       <a href="#results">Experimental results ↓</a>
       <a href="#interactive-demo">Interactive timing demo ↓</a>
@@ -249,6 +261,20 @@
       <div class="headline-result"><strong>15/20</strong><span class="metric-label">Fold Box successes</span><small>Sequential folding · 100 ms additional VLA delay</small></div>
     </div>
   </header>
+
+  <section class="project-video" id="project-video" aria-labelledby="project-video-title">
+    <h2 id="project-video-title">RSA video</h2>
+    <p class="sub">Watch the project video. Use the player controls to pause, seek, or view it fullscreen.</p>
+    <figure class="card project-video-frame">
+      <video class="project-video-player" width="1692" height="720" controls playsinline preload="metadata" aria-label="RSA project video" aria-describedby="project-video-caption">
+        <source src="figures/RSA.mp4" type="video/mp4">
+        Your browser does not support embedded video. <a href="figures/RSA.mp4">Open the RSA video</a>.
+      </video>
+      <figcaption class="project-video-caption" id="project-video-caption">
+        <a href="figures/RSA.mp4" target="_blank" rel="noopener">Open video in a new tab ↗</a>
+      </figcaption>
+    </figure>
+  </section>
 
   <section class="story-section" id="why-rsa" aria-labelledby="why-rsa-title">
     <h2 id="why-rsa-title">Why RSA: update the plan when the world has moved on</h2>
